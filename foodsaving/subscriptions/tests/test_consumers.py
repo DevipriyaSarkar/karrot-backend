@@ -3,7 +3,7 @@ from channels.test import ChannelTestCase, WSClient
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
-from foodsaving.subscriptions.models import ChannelSubscription
+from foodsaving.subscriptions.models import Subscription
 from foodsaving.users.factories import UserFactory
 
 
@@ -12,13 +12,13 @@ class ConsumerTests(ChannelTestCase):
         client = WSClient()
         user = UserFactory()
         client.force_login(user)
-        self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 0)
+        self.assertEqual(Subscription.objects.filter(user=user).count(), 0)
         client.send_and_consume('websocket.connect', path='/')
-        self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 1, 'Did not add subscription')
+        self.assertEqual(Subscription.objects.filter(user=user).count(), 1, 'Did not add subscription')
 
     def test_accepts_anonymous_connections(self):
         client = WSClient()
-        qs = ChannelSubscription.objects
+        qs = Subscription.objects
         original_count = qs.count()
         client.send_and_consume('websocket.connect', path='/')
         self.assertEqual(qs.count(), original_count)
@@ -28,11 +28,11 @@ class ConsumerTests(ChannelTestCase):
         user = UserFactory()
         client.force_login(user)
         client.send_and_consume('websocket.connect', path='/')
-        subscription = ChannelSubscription.objects.filter(user=user).first()
-        self.assertIsNotNone(subscription.reply_channel)
+        subscription = Subscription.objects.filter(user=user).first()
+        self.assertIsNotNone(subscription.destination)
 
         # send a message on it
-        Channel(subscription.reply_channel).send({'message': 'hey! whaatsup?'})
+        Channel(subscription.destination).send({'message': 'hey! whaatsup?'})
         self.assertEqual(client.receive(json=True), {'message': 'hey! whaatsup?'})
 
     def test_updates_lastseen(self):
@@ -43,11 +43,11 @@ class ConsumerTests(ChannelTestCase):
 
         # update the lastseen timestamp to ages ago
         the_past = timezone.now() - relativedelta(hours=6)
-        ChannelSubscription.objects.filter(user=user).update(lastseen_at=the_past)
+        Subscription.objects.filter(user=user).update(lastseen_at=the_past)
 
         # send a message, and it should update
         client.send_and_consume('websocket.receive', text={'message': 'hey'}, path='/')
-        subscription = ChannelSubscription.objects.filter(user=user).first()
+        subscription = Subscription.objects.filter(user=user).first()
         difference = subscription.lastseen_at - the_past
         self.assertGreater(difference.seconds, 1000)
 
@@ -56,7 +56,7 @@ class ConsumerTests(ChannelTestCase):
         user = UserFactory()
         client.force_login(user)
         client.send_and_consume('websocket.connect', path='/')
-        self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 1, 'Did not add subscription')
+        self.assertEqual(Subscription.objects.filter(user=user).count(), 1, 'Did not add subscription')
 
         client.send_and_consume('websocket.disconnect', path='/')
-        self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 0, 'Did not remove subscription')
+        self.assertEqual(Subscription.objects.filter(user=user).count(), 0, 'Did not remove subscription')

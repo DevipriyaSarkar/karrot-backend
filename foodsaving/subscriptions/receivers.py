@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 
 from foodsaving.conversations.models import ConversationParticipant, ConversationMessage
-from foodsaving.subscriptions.models import ChannelSubscription
+from foodsaving.subscriptions.models import Subscription, SubscriptionTypus
 
 
 @receiver(post_save, sender=ConversationMessage)
@@ -26,8 +26,8 @@ def send_messages(sender, instance, **kwargs):
         }
     }
 
-    for item in ChannelSubscription.objects.filter(user__in=conversation.participants.all()):
-        Channel(item.reply_channel).send({
+    for item in Subscription.objects.filter(typus=SubscriptionTypus.WEBSOCKET, user__in=conversation.participants.all()):
+        Channel(item.destination).send({
             # TODO: use a serializer
             "text": json.dumps({
                 'topic': topic,
@@ -42,8 +42,8 @@ def remove_participant(sender, instance, **kwargs):
 
     user = instance.user
     conversation = instance.conversation
-    for item in ChannelSubscription.objects.filter(user=user):
-        Channel(item.reply_channel).send({
+    for item in Subscription.objects.filter(typus=SubscriptionTypus.WEBSOCKET, user=user):
+        Channel(item.destination).send({
             # TODO: use a serializer
             'text': json.dumps({
                 'topic': 'conversations:leave',
