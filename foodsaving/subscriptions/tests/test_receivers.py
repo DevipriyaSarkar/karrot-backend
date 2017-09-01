@@ -7,6 +7,7 @@ from pyfcm.baseapi import BaseAPI as FCMAPI
 from foodsaving.conversations.factories import ConversationFactory
 from foodsaving.conversations.models import ConversationMessage
 from foodsaving.subscriptions.models import PushSubscriptionPlatform, PushSubscription
+from foodsaving.subscriptions.tests.test_consumers import get_login_backend
 from foodsaving.users.factories import UserFactory
 from foodsaving.utils.tests.fake import faker
 
@@ -23,7 +24,7 @@ class ReceiverTests(ChannelTestCase):
         conversation.join(author)
 
         # login and connect
-        client.force_login(user)
+        client.force_login(user, backend=get_login_backend())
         client.send_and_consume('websocket.connect', path='/')
 
         # add a message to the conversation
@@ -51,7 +52,7 @@ class ReceiverTests(ChannelTestCase):
         conversation.join(user)
 
         # login and connect
-        client.force_login(user)
+        client.force_login(user, backend=get_login_backend())
         client.send_and_consume('websocket.connect', path='/')
 
         conversation.leave(user)

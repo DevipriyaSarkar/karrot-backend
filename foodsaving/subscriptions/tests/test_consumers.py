@@ -1,6 +1,7 @@
 from channels import Channel
 from channels.test import ChannelTestCase, WSClient
 from dateutil.relativedelta import relativedelta
+from django.conf import settings
 from django.utils import timezone
 
 from foodsaving.subscriptions.models import ChannelSubscription
@@ -11,7 +12,7 @@ class ConsumerTests(ChannelTestCase):
     def test_adds_subscription(self):
         client = WSClient()
         user = UserFactory()
-        client.force_login(user)
+        client.force_login(user, backend=get_login_backend())
         self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 0)
         client.send_and_consume('websocket.connect', path='/')
         self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 1, 'Did not add subscription')
@@ -26,7 +27,7 @@ class ConsumerTests(ChannelTestCase):
     def test_saves_reply_channel(self):
         client = WSClient()
         user = UserFactory()
-        client.force_login(user)
+        client.force_login(user, backend=get_login_backend())
         client.send_and_consume('websocket.connect', path='/')
         subscription = ChannelSubscription.objects.filter(user=user).first()
         self.assertIsNotNone(subscription.reply_channel)
@@ -38,7 +39,7 @@ class ConsumerTests(ChannelTestCase):
     def test_updates_lastseen(self):
         client = WSClient()
         user = UserFactory()
-        client.force_login(user)
+        client.force_login(user, backend=get_login_backend())
         client.send_and_consume('websocket.connect', path='/')
 
         # update the lastseen timestamp to ages ago
@@ -54,9 +55,18 @@ class ConsumerTests(ChannelTestCase):
     def test_removes_subscription(self):
         client = WSClient()
         user = UserFactory()
-        client.force_login(user)
+        client.force_login(user, backend=get_login_backend())
         client.send_and_consume('websocket.connect', path='/')
         self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 1, 'Did not add subscription')
 
         client.send_and_consume('websocket.disconnect', path='/')
         self.assertEqual(ChannelSubscription.objects.filter(user=user).count(), 0, 'Did not remove subscription')
+
+
+def get_login_backend():
+    # TODO: remove this when https://github.com/django/channels/issues/730 is resolved
+    from django.contrib.auth import load_backend
+    for backend_path in settings.AUTHENTICATION_BACKENDS:
+        backend = load_backend(backend_path)
+        if hasattr(backend, 'get_user'):
+            return backend_path
