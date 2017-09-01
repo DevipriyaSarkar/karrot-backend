@@ -1,12 +1,12 @@
 from datetime import timedelta
 
 import dateutil.rrule
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import ugettext as _
 from rest_framework import serializers
 
-from django.conf import settings
 from foodsaving.history.utils import get_changed_data
 from foodsaving.stores.models import (
     PickupDate as PickupDateModel,
@@ -14,23 +14,28 @@ from foodsaving.stores.models import (
     PickupDateSeries as PickupDateSeriesModel,
     Store as StoreModel,
 )
+from foodsaving.stores.rules import pickup_rules
 from foodsaving.stores.signals import post_pickup_create, post_pickup_modify, post_pickup_join, post_pickup_leave, \
     post_series_create, post_series_modify, post_store_create, post_store_modify
+from foodsaving.utils.ruletools import RulesetSerializerField
 
 
 class PickupDateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupDateModel
-        fields = ['id', 'date', 'series', 'store', 'max_collectors', 'collector_ids', 'description']
+        fields = ['id', 'date', 'series', 'store', 'max_collectors', 'collector_ids', 'description', '_actions']
         update_fields = ['date', 'max_collectors', 'description']
         extra_kwargs = {
             'series': {'read_only': True},
         }
+
     collector_ids = serializers.PrimaryKeyRelatedField(
         source='collectors',
         many=True,
         read_only=True
     )
+
+    _actions = RulesetSerializerField(pickup_rules)
 
     def validate_store(self, store):
         if not self.context['request'].user.groups.filter(store=store).exists():

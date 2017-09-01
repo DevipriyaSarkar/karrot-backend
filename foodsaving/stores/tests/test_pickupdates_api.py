@@ -102,15 +102,17 @@ class TestPickupDateSeriesCreationAPI(APITestCase):
         for _ in response.data:
             del _['id']
             del _['date']
+            del _['_actions']
         for _ in dates_list:
             created_pickup_dates.append({
-                'max_collectors': 5,
                 'series': series_id,
-                'collector_ids': [],
                 'store': self.store.id,
+                'max_collectors': 5,
+                'collector_ids': [],
                 'description': ''
             })
-        self.assertEqual(response.data, created_pickup_dates)
+        self.assertEqual(len(response.data), len(created_pickup_dates))
+        self.assertEqual(list(map(dict, response.data)), created_pickup_dates)
 
 
 class TestPickupDateSeriesChangeAPI(APITestCase):
@@ -626,7 +628,7 @@ class TestPickupDatesAPI(APITestCase):
         self.pickup.collectors.add(u2)
         response = self.client.post(self.join_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
-        self.assertEqual(response.data, {'detail': 'Pickup date is already full.'})
+        self.assertEqual(response.data, {'detail': 'Pickup is full'})
 
     def test_join_past_pickup_fails(self):
         self.client.force_login(user=self.member)

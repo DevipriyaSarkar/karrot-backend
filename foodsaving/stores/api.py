@@ -7,19 +7,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
 from foodsaving.stores.filters import PickupDatesFilter, PickupDateSeriesFilter
-from foodsaving.stores.permissions import (
-    IsUpcoming, HasNotJoinedPickupDate, HasJoinedPickupDate, IsEmptyPickupDate,
-    IsNotFull)
-from foodsaving.stores.serializers import (
-    StoreSerializer, PickupDateSerializer, PickupDateSeriesSerializer,
-    PickupDateJoinSerializer, PickupDateLeaveSerializer, FeedbackSerializer)
 from foodsaving.stores.models import (
     Store as StoreModel,
     PickupDate as PickupDateModel,
     PickupDateSeries as PickupDateSeriesModel,
     Feedback as FeedbackModel
 )
-
+from foodsaving.stores.permissions import IsUpcoming
+from foodsaving.stores.rules import CanDeletePickup, CanJoinPickup, CanLeavePickup
+from foodsaving.stores.serializers import (
+    StoreSerializer, PickupDateSerializer, PickupDateSeriesSerializer,
+    PickupDateJoinSerializer, PickupDateLeaveSerializer, FeedbackSerializer)
 from foodsaving.utils.mixins import PartialUpdateModelMixin
 
 pre_pickup_delete = Signal()
@@ -88,7 +86,6 @@ class PickupDateSeriesViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
-
     serializer_class = PickupDateSeriesSerializer
     queryset = PickupDateSeriesModel.objects
     filter_backends = (filters.DjangoFilterBackend,)
@@ -133,7 +130,7 @@ class PickupDateViewSet(
 
     def get_permissions(self):
         if self.action == 'destroy':
-            self.permission_classes = (IsAuthenticated, IsUpcoming, IsEmptyPickupDate,)
+            self.permission_classes = (IsAuthenticated, CanDeletePickup)
 
         return super().get_permissions()
 
@@ -154,7 +151,7 @@ class PickupDateViewSet(
 
     @detail_route(
         methods=['POST'],
-        permission_classes=(IsAuthenticated, IsUpcoming, HasNotJoinedPickupDate, IsNotFull),
+        permission_classes=(IsAuthenticated, CanJoinPickup),
         serializer_class=PickupDateJoinSerializer
     )
     def add(self, request, pk=None):
@@ -162,7 +159,7 @@ class PickupDateViewSet(
 
     @detail_route(
         methods=['POST'],
-        permission_classes=(IsAuthenticated, IsUpcoming, HasJoinedPickupDate),
+        permission_classes=(IsAuthenticated, CanLeavePickup),
         serializer_class=PickupDateLeaveSerializer
     )
     def remove(self, request, pk=None):

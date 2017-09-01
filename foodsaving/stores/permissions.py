@@ -1,5 +1,5 @@
-from rest_framework import permissions
 from django.utils.translation import ugettext_lazy as _
+from rest_framework import permissions
 
 
 class IsUpcoming(permissions.BasePermission):
