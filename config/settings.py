@@ -54,6 +54,7 @@ INSTALLED_APPS = (
     'raven.contrib.django.raven_compat',
     'django_jinja',
     'channels',
+    'rules',
 )
 
 REST_FRAMEWORK = {
@@ -133,6 +134,11 @@ SESSION_CACHE_ALIAS = "default"
 WSGI_APPLICATION = 'config.wsgi.application'
 
 EMAIL_BACKEND = "anymail.backends.sparkpost.SparkPostBackend"
+
+AUTHENTICATION_BACKENDS = (
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
 
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',

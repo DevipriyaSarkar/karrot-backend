@@ -28,3 +28,4 @@ furl
 channels
 asgi_redis
 pyfcm
+rules
