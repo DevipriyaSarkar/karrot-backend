@@ -2,24 +2,21 @@ from django.dispatch import Signal
 from rest_framework import filters
 from rest_framework import mixins
 from rest_framework import viewsets
+from rest_framework.compat import is_authenticated
 from rest_framework.decorators import detail_route
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, DjangoObjectPermissions
 from rest_framework.viewsets import GenericViewSet
 
 from foodsaving.stores.filters import PickupDatesFilter, PickupDateSeriesFilter
-from foodsaving.stores.permissions import (
-    IsUpcoming, HasNotJoinedPickupDate, HasJoinedPickupDate, IsEmptyPickupDate,
-    IsNotFull)
-from foodsaving.stores.serializers import (
-    StoreSerializer, PickupDateSerializer, PickupDateSeriesSerializer,
-    PickupDateJoinSerializer, PickupDateLeaveSerializer, FeedbackSerializer)
 from foodsaving.stores.models import (
     Store as StoreModel,
     PickupDate as PickupDateModel,
     PickupDateSeries as PickupDateSeriesModel,
     Feedback as FeedbackModel
 )
-
+from foodsaving.stores.serializers import (
+    StoreSerializer, PickupDateSerializer, PickupDateSeriesSerializer,
+    PickupDateJoinSerializer, PickupDateLeaveSerializer, FeedbackSerializer)
 from foodsaving.utils.mixins import PartialUpdateModelMixin
 
 pre_pickup_delete = Signal()
@@ -88,7 +85,6 @@ class PickupDateSeriesViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet
 ):
-
     serializer_class = PickupDateSeriesSerializer
     queryset = PickupDateSeriesModel.objects
     filter_backends = (filters.DjangoFilterBackend,)
@@ -106,6 +102,32 @@ class PickupDateSeriesViewSet(
             user=self.request.user,
         )
         super().perform_destroy(series)
+
+
+class DjangoRulesPermissions(DjangoObjectPermissions):
+    def has_permission(self, request, view):
+
+        permission_names = getattr(view, 'permission_names', None)
+
+        if permission_names is None:
+            return super().has_permission(request, view)
+        else:
+            return (
+                request.user and
+                (is_authenticated(request.user) or not self.authenticated_users_only) and
+                request.user.has_perms(permission_names)
+            )
+
+    def has_object_permission(self, request, view, obj):
+        permission_names = getattr(view, 'permission_names', None)
+
+        user = request.user
+
+        if permission_names is None:
+            return super().has_object_permission(request, view, obj)
+        else:
+            # doesn't do that fancy 404 vs 403 thing... but is simpler
+            return user.has_perms(permission_names, obj)
 
 
 class PickupDateViewSet(
@@ -129,15 +151,12 @@ class PickupDateViewSet(
     queryset = PickupDateModel.objects.filter(deleted=False)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = PickupDatesFilter
-    permission_classes = (IsAuthenticated, IsUpcoming)
-
-    def get_permissions(self):
-        if self.action == 'destroy':
-            self.permission_classes = (IsAuthenticated, IsUpcoming, IsEmptyPickupDate,)
-
-        return super().get_permissions()
+    permission_classes = (DjangoRulesPermissions,)
+    permission_names = None
 
     def get_queryset(self):
+        if self.request.user.is_anonymous:
+            return self.queryset.none()
         return self.queryset.filter(store__group__members=self.request.user)
 
     def perform_destroy(self, pickup):
@@ -154,16 +173,16 @@ class PickupDateViewSet(
 
     @detail_route(
         methods=['POST'],
-        permission_classes=(IsAuthenticated, IsUpcoming, HasNotJoinedPickupDate, IsNotFull),
-        serializer_class=PickupDateJoinSerializer
+        serializer_class=PickupDateJoinSerializer,
+        permission_names=['stores.join_pickupdate']
     )
     def add(self, request, pk=None):
         return self.partial_update(request)
 
     @detail_route(
         methods=['POST'],
-        permission_classes=(IsAuthenticated, IsUpcoming, HasJoinedPickupDate),
-        serializer_class=PickupDateLeaveSerializer
+        serializer_class=PickupDateLeaveSerializer,
+        permission_names=['stores.leave_pickupdate']
     )
     def remove(self, request, pk=None):
         return self.partial_update(request)

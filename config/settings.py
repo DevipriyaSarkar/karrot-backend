@@ -54,7 +54,7 @@ INSTALLED_APPS = (
     'raven.contrib.django.raven_compat',
     'django_jinja',
     'channels',
-    'rules',
+    'rules.apps.AutodiscoverRulesConfig', # auto imports rules.py files
 )
 
 REST_FRAMEWORK = {
@@ -137,7 +137,7 @@ EMAIL_BACKEND = "anymail.backends.sparkpost.SparkPostBackend"
 
 AUTHENTICATION_BACKENDS = (
     'rules.permissions.ObjectPermissionBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'foodsaving.userauth.backends.ModelBackendWithoutPermissions',
 )
 
 PASSWORD_HASHERS = [

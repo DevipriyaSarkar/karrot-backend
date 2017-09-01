@@ -1,16 +1,16 @@
 from datetime import timedelta
 
 from anymail.message import AnymailMessage
+from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import PermissionsMixin
 from django.db import transaction, IntegrityError
-from django.template.loader import render_to_string
-
 from django.db.models import EmailField, BooleanField, TextField, CharField, DateTimeField, ForeignKey
+from django.template.loader import render_to_string
 from django.utils import crypto
 from django.utils import timezone
 from django.utils.translation import ugettext as _
 
-from django.conf import settings
 from foodsaving.base.base_models import BaseModel, LocationModel
 
 MAX_DISPLAY_NAME_LENGTH = 80
@@ -180,9 +180,10 @@ class User(AbstractBaseUser, BaseModel, LocationModel):
         ).send()
 
     def has_perm(self, perm, obj=None):
-        # temporarily only allow access for admins
-        return self.is_superuser
+        return PermissionsMixin.has_perm(self, perm, obj)
+
+    def has_perms(self, perm_list, obj=None):
+        return PermissionsMixin.has_perms(self, perm_list, obj)
 
     def has_module_perms(self, app_label):
-        # temporarily only allow access for admins
-        return self.is_superuser
+        return PermissionsMixin.has_module_perms(self, app_label)
