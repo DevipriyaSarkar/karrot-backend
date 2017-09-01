@@ -136,7 +136,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 EMAIL_BACKEND = "anymail.backends.sparkpost.SparkPostBackend"
 
 AUTHENTICATION_BACKENDS = (
-    'rules.permissions.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
