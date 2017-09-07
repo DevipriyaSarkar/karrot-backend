@@ -1,0 +1,41 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+[packages]
+coverage = "*"
+django-cors-headers = "*"
+django-enumfield = "==1.3b2"
+django-extensions = "*"
+django-redis = "*"
+django-rest-swagger = "*"
+django-jinja = "*"
+djangorestframework = "*"
+drf-nested-routers = "*"
+factory_boy = "*"
+hiredis = "*"
+Markdown = "*"
+psycopg2 = "*"
+redis = "*"
+flake8 = "*"
+pytz = "*"
+django-filter = "*"
+django-crispy-forms = "*"
+django-anymail = "*"
+sparkpost = "*"
+django-influxdb-metrics = "*"
+django-timezone-field = "*"
+raven = "*"
+responses = "*"
+furl = "*"
+channels = "*"
+asgi_redis = "*"
+pyfcm = "*"
+
+[dev-packages]
+ipython = "*"
+requests-mock = "*"
+tblib = "*"
+
+[packages.Django]
+extras = [ "argon2",]
